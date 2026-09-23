@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Camada, Furo, HACHURAS, RochaTrecho, SptLeitura, nSpt } from "./types";
 
 /** Gera o SVG (como string) da coluna estratigráfica + gráfico de N x profundidade. */
@@ -143,6 +144,57 @@ export function fmtDate(v: string | null | undefined): string {
   const d = new Date(v + "T00:00:00");
   if (Number.isNaN(d.getTime())) return v;
   return d.toLocaleDateString("pt-PT");
+}
+
+/** Estilo CSS (background) que aproxima a hachura geotécnica de cada tipo de solo. */
+export function hachuraCss(key: string): CSSProperties {
+  const hac = HACHURAS[key] || HACHURAS.argila;
+  const base = hac.base;
+  switch (hac.pat) {
+    case "linhas":
+      return {
+        backgroundColor: base,
+        backgroundImage: "repeating-linear-gradient(0deg, #5a4530 0, #5a4530 1px, transparent 1px, transparent 7px)",
+      };
+    case "linhas_pontos":
+      return {
+        backgroundColor: base,
+        backgroundImage:
+          "repeating-linear-gradient(0deg, #5a4530 0, #5a4530 1px, transparent 1px, transparent 7px), radial-gradient(#5a4530 1px, transparent 1.2px)",
+        backgroundSize: "auto, 7px 7px",
+      };
+    case "pontos_finos":
+      return {
+        backgroundColor: base,
+        backgroundImage: "radial-gradient(#6b5a38 0.8px, transparent 1px)",
+        backgroundSize: "6px 6px",
+      };
+    case "pontos":
+      return {
+        backgroundColor: base,
+        backgroundImage: "radial-gradient(#6b5a38 1.1px, transparent 1.4px)",
+        backgroundSize: "9px 9px",
+      };
+    case "circulos":
+      return {
+        backgroundColor: base,
+        backgroundImage: "radial-gradient(circle, transparent 2.6px, #55554e 2.6px, #55554e 3.2px, transparent 3.2px)",
+        backgroundSize: "12px 12px",
+      };
+    case "hachura_rocha":
+      return {
+        backgroundColor: base,
+        backgroundImage: "repeating-linear-gradient(45deg, #454540 0, #454540 1.5px, transparent 1.5px, transparent 7px)",
+      };
+    case "aterro":
+      return {
+        backgroundColor: base,
+        backgroundImage:
+          "repeating-linear-gradient(135deg, #7a6a45 0, #7a6a45 2px, transparent 2px, transparent 6px)",
+      };
+    default:
+      return { backgroundColor: base };
+  }
 }
 
 /** Validações não-bloqueantes de continuidade das camadas. */

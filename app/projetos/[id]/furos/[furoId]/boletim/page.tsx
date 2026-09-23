@@ -5,8 +5,21 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { supabase } from "@/lib/supabaseClient";
-import { Amostra, Camada, Foto, Furo, Projeto, RochaTrecho, SptLeitura, ALTERACAO, ALTERACAO_LBL, FRATURACAO, FRATURACAO_LBL, nSpt } from "@/lib/types";
-import { fmtDate, fmtNum, strataSvg } from "@/lib/strata";
+import {
+  Amostra,
+  Camada,
+  Foto,
+  Furo,
+  Projeto,
+  RochaTrecho,
+  SptLeitura,
+  ALTERACAO,
+  ALTERACAO_LBL,
+  FRATURACAO,
+  FRATURACAO_LBL,
+  nSpt,
+} from "@/lib/types";
+import { fmtDate, fmtNum, hachuraCss } from "@/lib/strata";
 
 export default function BoletimPage() {
   const params = useParams<{ id: string; furoId: string }>();
@@ -15,17 +28,19 @@ export default function BoletimPage() {
   const [camadas, setCamadas] = useState<Camada[]>([]);
   const [spt, setSpt] = useState<SptLeitura[]>([]);
   const [rocha, setRocha] = useState<RochaTrecho[]>([]);
+  const [amostras, setAmostras] = useState<Amostra[]>([]);
   const [fotos, setFotos] = useState<(Foto & { url: string })[]>([]);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const [p, f, c, s, r, ph] = await Promise.all([
+      const [p, f, c, s, r, am, ph] = await Promise.all([
         supabase.from("projetos").select("*").eq("id", params.id).single(),
         supabase.from("furos").select("*").eq("id", params.furoId).single(),
         supabase.from("camadas").select("*").eq("furo_id", params.furoId).order("prof_inicial"),
         supabase.from("spt_leituras").select("*").eq("furo_id", params.furoId).order("profundidade"),
         supabase.from("rocha_trechos").select("*").eq("furo_id", params.furoId).order("prof_desde"),
+        supabase.from("amostras").select("*").eq("furo_id", params.furoId).order("profundidade"),
         supabase.from("fotos").select("*").eq("furo_id", params.furoId).order("created_at"),
       ]);
       setProjeto(p.data as Projeto);
@@ -33,6 +48,7 @@ export default function BoletimPage() {
       setCamadas((c.data as Camada[]) || []);
       setSpt((s.data as SptLeitura[]) || []);
       setRocha((r.data as RochaTrecho[]) || []);
+      setAmostras((am.data as Amostra[]) || []);
       setFotos(
         ((ph.data as Foto[]) || []).map((x) => ({
           ...x,
@@ -76,10 +92,8 @@ export default function BoletimPage() {
     );
   }
 
-  const nfText = furo.nivel_freatico_atingido && furo.nivel_freatico_prof != null ? `${fmtNum(furo.nivel_freatico_prof)} m` : "INATINGÍVEL";
   const camsSorted = [...camadas].sort((a, b) => a.prof_inicial - b.prof_inicial);
-  const totalDepth = Math.max(furo.profundidade_total || 1, 1);
-  const bodyHeight = Math.max(340, Math.min(520, Math.round(totalDepth * 24) + 50));
+  const sptSorted = [...spt].sort((a, b) => a.profundidade - b.profundidade);
 
   return (
     <AppShell>
@@ -109,8 +123,8 @@ export default function BoletimPage() {
             <div className="bt-brand">
               <div className="mark" />
               <div>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{projeto.nome_cliente}</div>
-                <div style={{ fontSize: 10.5, color: "#5b6b68" }}>Estudos e Projectos Geotécnicos</div>
+                <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: "-0.02em" }}>hubgeo</div>
+                <div style={{ fontSize: 10, color: "#5b6b68" }}>Estudos e Projectos</div>
               </div>
             </div>
             <div className="bt-idbox">
@@ -120,84 +134,22 @@ export default function BoletimPage() {
             </div>
           </div>
 
-          <div className="bt-metablock">
-            <MetaItem label="Cliente" value={projeto.nome_cliente} />
-            <MetaItem label="Cota (m)" value={fmtNum(furo.cota_z)} />
-            <MetaItem label="Projeto" value={projeto.nome_projeto} />
-            <MetaItem label="Comprimento (m)" value={fmtNum(furo.profundidade_total)} />
-            <MetaItem label="Localização" value={projeto.localizacao} />
-            <MetaItem label="Nível de água" value={nfText} />
-            <MetaItem label="Tipo de sondagem" value={furo.tipo_sondagem} />
-            <MetaItem label="Coordenadas" value={`${fmtNum(furo.coordenada_x)} / ${fmtNum(furo.coordenada_y)}`} />
-            <MetaItem label="Diâmetro / broca" value={furo.broca_tipo_tamanho} />
-            <MetaItem label="Data inicial" value={fmtDate(furo.data_inicio)} />
-            <MetaItem label="Equipamento" value={furo.equipamento} />
-            <MetaItem label="Data final" value={fmtDate(furo.data_conclusao)} />
+          <div className="bt-metablock2">
+            <MetaRow label="Cliente" value={projeto.nome_cliente} />
+            <MetaRow label="Cota" value={fmtNum(furo.cota_z) + " m"} />
+            <MetaRow label="Projecto" value={projeto.nome_projeto} />
+            <MetaRow label="Comprimento" value={fmtNum(furo.profundidade_total) + " m"} />
+            <MetaRow label="Localização" value={projeto.localizacao} />
+            <MetaRow label="Inclinação" value={fmtNum(furo.inclinacao) + "º"} />
+            <MetaRow label="Tipo de sondagem" value={furo.tipo_sondagem} />
+            <MetaRow label="Coordenadas" value={`M:${fmtNum(furo.coordenada_x)}  P:${fmtNum(furo.coordenada_y)}`} />
+            <MetaRow label="Diâmetro" value={furo.broca_tipo_tamanho} />
+            <MetaRow label="Data inicial" value={fmtDate(furo.data_inicio)} />
+            <MetaRow label="Equipamento" value={furo.equipamento} />
+            <MetaRow label="Data final" value={fmtDate(furo.data_conclusao)} />
           </div>
 
-          <div className="bt-body" style={{ minHeight: bodyHeight }}>
-            <div className="bt-col">
-              <div className="bt-colhead">N.A.</div>
-            </div>
-            <div className="bt-col" style={{ padding: 0 }}>
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: strataSvg(furo, camsSorted, spt, rocha, { width: 150, height: bodyHeight, mode: "full" }),
-                }}
-              />
-            </div>
-            <div className="bt-col" style={{ padding: "6px 10px" }}>
-              <div className="bt-colhead" style={{ textAlign: "left" }}>
-                Descrição tátil-visual &amp; amostras SPT
-              </div>
-              {camsSorted.map((c) => {
-                const sptHere = spt.filter((s) => s.profundidade >= c.prof_inicial && s.profundidade < c.prof_final + 0.001);
-                return (
-                  <div key={c.id} style={{ marginBottom: 9 }}>
-                    <div style={{ fontWeight: 600, fontSize: 10.5 }}>
-                      {fmtNum(c.prof_inicial)}–{fmtNum(c.prof_final)} m · {c.nome_solo}
-                    </div>
-                    <div style={{ fontSize: 9.8, color: "#3d4a48" }}>{c.descricao}</div>
-                    {sptHere.map((s) => (
-                      <div
-                        key={s.id}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: 9.5,
-                          fontFamily: "var(--font-mono)",
-                          padding: "1px 0",
-                          borderTop: "1px dotted #e2ded2",
-                        }}
-                      >
-                        <span>
-                          {fmtNum(s.profundidade)}m · {s.indice_amostra}
-                        </span>
-                        <span>
-                          {s.golpes_1a ?? "–"}/{s.golpes_2a ?? "–"}/{s.golpes_3a ?? "–"} → N={nSpt(s)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="bt-col" style={{ padding: "6px 8px" }}>
-              <div className="bt-colhead">Rocha (Recup./RQD/Fratur./Alter.)</div>
-              {rocha.length === 0 && <div style={{ fontSize: 10, color: "#8a958f" }}>Sem trecho rochoso.</div>}
-              {rocha.map((r) => (
-                <div key={r.id} style={{ fontSize: 9.8, borderTop: "1px dotted #e2ded2", padding: "4px 0" }}>
-                  <b>
-                    {fmtNum(r.prof_desde)}–{fmtNum(r.prof_ate)}m
-                  </b>
-                  <br />
-                  Recup: {r.recuperacao ?? "—"}% · RQD: {r.rqd ?? "—"}%
-                  <br />
-                  {r.fraturacao} · {r.alteracao}
-                </div>
-              ))}
-            </div>
-          </div>
+          <BoletimGrid furo={furo} camadas={camsSorted} spt={sptSorted} rocha={rocha} amostras={amostras} />
 
           <div className="bt-foot">
             <div className="legend-tables" style={{ marginTop: 0 }}>
@@ -216,7 +168,7 @@ export default function BoletimPage() {
               </table>
               <table>
                 <caption style={{ textAlign: "left", fontSize: 10.5, fontWeight: 600, marginBottom: 2 }}>
-                  Grau de fraturação
+                  Grau de fracturação
                 </caption>
                 <tbody>
                   {FRATURACAO.map((k) => (
@@ -241,10 +193,14 @@ export default function BoletimPage() {
               </div>
             </div>
           </div>
+          <div className="bt-pagefoot">
+            <span>Boletim de sondagem SPT — hubgeo</span>
+            <span>pág. 1</span>
+          </div>
         </div>
 
         {fotos.length > 0 && (
-          <div className="boletim-page">
+          <div className="boletim-page bt-photopage">
             <h2 style={{ fontSize: 16, marginBottom: 14 }}>REGISTO FOTOGRÁFICO — {furo.id_ensaio}</h2>
             <div className="bt-photogrid">
               {fotos.map((ph) => (
@@ -257,6 +213,10 @@ export default function BoletimPage() {
                 </figure>
               ))}
             </div>
+            <div className="bt-pagefoot" style={{ position: "static", marginTop: 20 }}>
+              <span>Boletim de sondagem SPT — hubgeo</span>
+              <span>pág. 2</span>
+            </div>
           </div>
         )}
       </div>
@@ -264,11 +224,352 @@ export default function BoletimPage() {
   );
 }
 
-function MetaItem({ label, value }: { label: string; value?: string | number | null }) {
+function MetaRow({ label, value }: { label: string; value?: string | number | null }) {
   return (
-    <div className="mi">
+    <div className="mr">
       <span>{label}</span>
       <span>{value || "—"}</span>
+    </div>
+  );
+}
+
+/* ============ grade principal do boletim (réplica das colunas do GEO5) ============ */
+
+const COLS = [
+  { key: "na", label: "", width: 24 },
+  { key: "comprimento", label: "COMPRIMENTO", width: 44 },
+  { key: "f1", label: "1ª FASE", width: 32 },
+  { key: "f2", label: "2ª FASE", width: 32 },
+  { key: "f3", label: "3ª FASE", width: 32 },
+  { key: "grafico", label: "GRÁFICO", width: 150 },
+  { key: "profundidade", label: "PROFUNDIDADE", width: 50 },
+  { key: "simbologia", label: "SIMBOLOGIA", width: 42 },
+  { key: "descricao", label: "DESCRIÇÃO TÁTIL-VISUAL", width: "flex" as const },
+  { key: "amostra", label: "AMOSTRA INTACTA", width: 62 },
+  { key: "recuperacao", label: "RECUP.", width: 42 },
+  { key: "rqd", label: "RQD", width: 36 },
+  { key: "fraturacao", label: "FRATUR.", width: 50 },
+  { key: "alteracao", label: "ALTER.", width: 50 },
+];
+
+function gridTemplateColumns() {
+  return COLS.map((c) => (c.width === "flex" ? "minmax(160px,1fr)" : `${c.width}px`)).join(" ");
+}
+
+function BoletimGrid({
+  furo,
+  camadas,
+  spt,
+  rocha,
+  amostras,
+}: {
+  furo: Furo;
+  camadas: Camada[];
+  spt: SptLeitura[];
+  rocha: RochaTrecho[];
+  amostras: Amostra[];
+}) {
+  const profTotal = Math.max(
+    furo.profundidade_total || 0,
+    1,
+    camadas.length ? camadas[camadas.length - 1].prof_final : 0,
+    spt.length ? spt[spt.length - 1].profundidade : 0,
+    rocha.length ? rocha[rocha.length - 1].prof_ate : 0
+  );
+  const H = Math.max(360, Math.min(900, Math.round(profTotal * 27) + 10));
+  const y = (d: number) => (d / profTotal) * H;
+
+  const gridCols = gridTemplateColumns();
+
+  const boundaryDepths = Array.from(
+    new Set<number>([0, ...camadas.map((c) => c.prof_inicial), ...camadas.map((c) => c.prof_final), profTotal])
+  ).sort((a, b) => a - b);
+
+  const amostrasIntactas = amostras.filter((a) => a.tipo === "Indeformada" && a.profundidade != null);
+
+  return (
+    <div className="bt-grid-wrap">
+      {/* cabeçalho */}
+      <div
+        className="bt-grid-header"
+        style={{ display: "grid", gridTemplateColumns: gridCols, gridTemplateRows: "22px 22px" }}
+      >
+        <HeaderCell label="N.A." colStart={1} colSpan={1} rowSpan={2} />
+        <HeaderCell label="ENSAIO SPT" colStart={2} colSpan={5} rowSpan={1} />
+        <HeaderCell label="PROFUNDIDADE" colStart={7} colSpan={1} rowSpan={2} />
+        <HeaderCell label="SIMBOLOGIA" colStart={8} colSpan={1} rowSpan={2} />
+        <HeaderCell label="DESCRIÇÃO TÁTIL-VISUAL" colStart={9} colSpan={1} rowSpan={2} align="left" />
+        <HeaderCell label="AMOSTRA INTACTA" colStart={10} colSpan={1} rowSpan={2} />
+        <HeaderCell label="CLASSIFICAÇÃO — ROCHA" colStart={11} colSpan={4} rowSpan={1} />
+
+        <HeaderCell label="COMPRIMENTO" colStart={2} colSpan={1} rowSpan={1} row={2} small />
+        <HeaderCell label="1ª FASE" colStart={3} colSpan={1} rowSpan={1} row={2} small />
+        <HeaderCell label="2ª FASE" colStart={4} colSpan={1} rowSpan={1} row={2} small />
+        <HeaderCell label="3ª FASE" colStart={5} colSpan={1} rowSpan={1} row={2} small />
+        <HeaderCell label="N (2ª+3ª)" colStart={6} colSpan={1} rowSpan={1} row={2} small />
+        <HeaderCell label="RECUP." colStart={11} colSpan={1} rowSpan={1} row={2} small />
+        <HeaderCell label="RQD" colStart={12} colSpan={1} rowSpan={1} row={2} small />
+        <HeaderCell label="FRATUR." colStart={13} colSpan={1} rowSpan={1} row={2} small />
+        <HeaderCell label="ALTER." colStart={14} colSpan={1} rowSpan={1} row={2} small />
+      </div>
+
+      {/* corpo */}
+      <div className="bt-grid-body" style={{ display: "grid", gridTemplateColumns: gridCols, height: H }}>
+        {/* nível freático */}
+        <div className="bt-gcol" style={{ position: "relative" }}>
+          {furo.nivel_freatico_atingido && furo.nivel_freatico_prof != null ? (
+            <>
+              <div
+                className="bt-hline"
+                style={{ top: y(furo.nivel_freatico_prof) }}
+                title={`N.A. a ${fmtNum(furo.nivel_freatico_prof)} m`}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  top: y(furo.nivel_freatico_prof) - 6,
+                  left: 4,
+                  width: 0,
+                  height: 0,
+                  borderLeft: "5px solid transparent",
+                  borderRight: "5px solid transparent",
+                  borderTop: "7px solid #2e5c8a",
+                }}
+              />
+            </>
+          ) : (
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%,-50%) rotate(-90deg)",
+                whiteSpace: "nowrap",
+                fontSize: 8.5,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                color: "#b23a3a",
+              }}
+            >
+              INATINGÍVEL
+            </div>
+          )}
+        </div>
+
+        {/* comprimento / 1a / 2a / 3a fase */}
+        <div className="bt-gcol">
+          {spt.map((s) => (
+            <div key={s.id} className="bt-cell-mark mono" style={{ top: y(s.profundidade) }}>
+              {fmtNum(s.profundidade)}
+            </div>
+          ))}
+        </div>
+        <div className="bt-gcol">
+          {spt.map((s) => (
+            <div key={s.id} className="bt-cell-mark mono" style={{ top: y(s.profundidade) }}>
+              {s.golpes_1a ?? "–"}
+            </div>
+          ))}
+        </div>
+        <div className="bt-gcol">
+          {spt.map((s) => (
+            <div key={s.id} className="bt-cell-mark mono" style={{ top: y(s.profundidade) }}>
+              {s.golpes_2a ?? "–"}
+            </div>
+          ))}
+        </div>
+        <div className="bt-gcol">
+          {spt.map((s) => (
+            <div key={s.id} className="bt-cell-mark mono" style={{ top: y(s.profundidade) }}>
+              {s.golpes_3a ?? "–"}
+            </div>
+          ))}
+        </div>
+
+        {/* gráfico N x profundidade */}
+        <div className="bt-gcol" style={{ position: "relative" }}>
+          {spt.map((s) => (
+            <div key={s.id} className="bt-hline-faint" style={{ top: y(s.profundidade) }} />
+          ))}
+          <svg
+            viewBox={`0 0 150 ${H}`}
+            width="100%"
+            height={H}
+            style={{ position: "absolute", inset: 0 }}
+            preserveAspectRatio="none"
+          >
+            {[0, 10, 20, 30, 40, 50].map((n) => (
+              <g key={n}>
+                <line x1={(n / 50) * 150} y1={0} x2={(n / 50) * 150} y2={H} stroke="#d7ddd4" strokeWidth={1} />
+                <text x={(n / 50) * 150} y={H - 2} fontSize={7} textAnchor="middle" fill="#5b6b68">
+                  {n}
+                </text>
+              </g>
+            ))}
+            {spt.length > 0 && (
+              <polyline
+                fill="none"
+                stroke="#2e5c8a"
+                strokeWidth={1.4}
+                points={spt
+                  .filter((s) => s.golpes_2a != null && s.golpes_3a != null)
+                  .map((s) => `${(Math.min(nSpt(s), 50) / 50) * 150},${y(s.profundidade)}`)
+                  .join(" ")}
+              />
+            )}
+            {spt
+              .filter((s) => s.golpes_2a != null && s.golpes_3a != null)
+              .map((s) => (
+                <g key={s.id}>
+                  <circle cx={(Math.min(nSpt(s), 50) / 50) * 150} cy={y(s.profundidade)} r={2.6} fill="#2e5c8a" />
+                  <text x={(Math.min(nSpt(s), 50) / 50) * 150 + 5} y={y(s.profundidade) + 3} fontSize={8} fill="#17201f">
+                    {nSpt(s)}
+                  </text>
+                </g>
+              ))}
+          </svg>
+        </div>
+
+        {/* profundidade (marcos das camadas) */}
+        <div className="bt-gcol">
+          {boundaryDepths.map((d, i) => (
+            <div key={i} className="bt-cell-mark mono" style={{ top: y(d) }}>
+              {fmtNum(d)}
+            </div>
+          ))}
+        </div>
+
+        {/* simbologia */}
+        <div className="bt-gcol" style={{ position: "relative" }}>
+          {camadas.map((c) => (
+            <div
+              key={c.id}
+              style={{
+                position: "absolute",
+                top: y(c.prof_inicial),
+                height: Math.max(y(c.prof_final) - y(c.prof_inicial), 1),
+                left: 0,
+                right: 0,
+                borderBottom: "1px solid #17201f",
+                ...hachuraCss(c.hachura),
+              }}
+            />
+          ))}
+        </div>
+
+        {/* descrição tátil-visual */}
+        <div className="bt-gcol" style={{ position: "relative" }}>
+          {camadas.map((c) => {
+            const h = Math.max(y(c.prof_final) - y(c.prof_inicial), 1);
+            return (
+              <div
+                key={c.id}
+                style={{
+                  position: "absolute",
+                  top: y(c.prof_inicial),
+                  height: h,
+                  left: 0,
+                  right: 0,
+                  borderBottom: "1px dashed #e2ded2",
+                  padding: "3px 8px",
+                  fontSize: 9.6,
+                  lineHeight: 1.25,
+                  overflow: "hidden",
+                  display: "flex",
+                  alignItems: h > 30 ? "center" : "flex-start",
+                }}
+              >
+                <span>
+                  <b>{c.nome_solo}</b>
+                  {c.descricao ? `, ${c.descricao}` : ""}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* amostra intacta */}
+        <div className="bt-gcol">
+          {amostrasIntactas.map((a) => (
+            <div key={a.id} className="bt-cell-mark mono" style={{ top: y(a.profundidade as number) }}>
+              {fmtNum(a.profundidade)}
+            </div>
+          ))}
+        </div>
+
+        {/* classificação rocha: recuperação / rqd / fraturação / alteração */}
+        {(["recuperacao", "rqd", "fraturacao", "alteracao"] as const).map((field) => (
+          <div className="bt-gcol" key={field} style={{ position: "relative" }}>
+            {rocha.map((r) => {
+              const h = Math.max(y(r.prof_ate) - y(r.prof_desde), 1);
+              const val =
+                field === "recuperacao"
+                  ? r.recuperacao != null
+                    ? `${r.recuperacao}%`
+                    : "—"
+                  : field === "rqd"
+                  ? r.rqd != null
+                    ? `${r.rqd}%`
+                    : "—"
+                  : field === "fraturacao"
+                  ? r.fraturacao || "—"
+                  : r.alteracao || "—";
+              return (
+                <div
+                  key={r.id}
+                  style={{
+                    position: "absolute",
+                    top: y(r.prof_desde),
+                    height: h,
+                    left: 0,
+                    right: 0,
+                    borderBottom: "1px solid #17201f",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 9,
+                  }}
+                >
+                  {val}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HeaderCell({
+  label,
+  colStart,
+  colSpan,
+  rowSpan,
+  row = 1,
+  small = false,
+  align = "center",
+}: {
+  label: string;
+  colStart: number;
+  colSpan: number;
+  rowSpan: number;
+  row?: number;
+  small?: boolean;
+  align?: "left" | "center";
+}) {
+  return (
+    <div
+      className="bt-th"
+      style={{
+        gridColumn: `${colStart} / span ${colSpan}`,
+        gridRow: `${row} / span ${rowSpan}`,
+        fontSize: small ? 7 : 7.6,
+        textAlign: align,
+        justifyContent: align === "left" ? "flex-start" : "center",
+      }}
+    >
+      {label}
     </div>
   );
 }
