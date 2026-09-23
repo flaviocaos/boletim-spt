@@ -468,12 +468,12 @@ legend {
   border-radius: 14px;
 }
 .boletim-page {
-  width: 1122px;
-  min-height: 780px;
+  width: 794px;
+  min-height: 1123px;
   background: #fff;
   color: #17201f;
   margin: 0 auto 26px;
-  padding: 26px 30px;
+  padding: 24px 26px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
   position: relative;
   max-width: 100%;

@@ -64,7 +64,7 @@ export default function BoletimPage() {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
       const pages = document.querySelectorAll<HTMLElement>("#boletimWrap .boletim-page");
-      const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
       for (let i = 0; i < pages.length; i++) {
         const canvas = await html2canvas(pages[i], { scale: 2, backgroundColor: "#ffffff" });
         const img = canvas.toDataURL("image/jpeg", 0.92);
@@ -73,7 +73,7 @@ export default function BoletimPage() {
         const ratio = Math.min(pw / canvas.width, ph / canvas.height);
         const w = canvas.width * ratio;
         const h = canvas.height * ratio;
-        if (i > 0) doc.addPage("a4", "landscape");
+        if (i > 0) doc.addPage("a4", "portrait");
         doc.addImage(img, "JPEG", (pw - w) / 2, (ph - h) / 2, w, h);
       }
       doc.save(`boletim-${(furo?.id_ensaio || "sondagem").replace(/\s+/g, "_")}.pdf`);
@@ -236,24 +236,24 @@ function MetaRow({ label, value }: { label: string; value?: string | number | nu
 /* ============ grade principal do boletim (réplica das colunas do GEO5) ============ */
 
 const COLS = [
-  { key: "na", label: "", width: 24 },
-  { key: "comprimento", label: "COMPRIMENTO", width: 44 },
-  { key: "f1", label: "1ª FASE", width: 32 },
-  { key: "f2", label: "2ª FASE", width: 32 },
-  { key: "f3", label: "3ª FASE", width: 32 },
-  { key: "grafico", label: "GRÁFICO", width: 150 },
-  { key: "profundidade", label: "PROFUNDIDADE", width: 50 },
-  { key: "simbologia", label: "SIMBOLOGIA", width: 42 },
+  { key: "na", label: "", width: 18 },
+  { key: "comprimento", label: "COMPRIMENTO", width: 32 },
+  { key: "f1", label: "1ª FASE", width: 24 },
+  { key: "f2", label: "2ª FASE", width: 24 },
+  { key: "f3", label: "3ª FASE", width: 24 },
+  { key: "grafico", label: "GRÁFICO", width: 96 },
+  { key: "profundidade", label: "PROFUNDIDADE", width: 38 },
+  { key: "simbologia", label: "SIMBOLOGIA", width: 30 },
   { key: "descricao", label: "DESCRIÇÃO TÁTIL-VISUAL", width: "flex" as const },
-  { key: "amostra", label: "AMOSTRA INTACTA", width: 62 },
-  { key: "recuperacao", label: "RECUP.", width: 42 },
-  { key: "rqd", label: "RQD", width: 36 },
-  { key: "fraturacao", label: "FRATUR.", width: 50 },
-  { key: "alteracao", label: "ALTER.", width: 50 },
+  { key: "amostra", label: "AMOSTRA INTACTA", width: 44 },
+  { key: "recuperacao", label: "RECUP.", width: 30 },
+  { key: "rqd", label: "RQD", width: 26 },
+  { key: "fraturacao", label: "FRATUR.", width: 34 },
+  { key: "alteracao", label: "ALTER.", width: 34 },
 ];
 
 function gridTemplateColumns() {
-  return COLS.map((c) => (c.width === "flex" ? "minmax(160px,1fr)" : `${c.width}px`)).join(" ");
+  return COLS.map((c) => (c.width === "flex" ? "minmax(100px,1fr)" : `${c.width}px`)).join(" ");
 }
 
 function BoletimGrid({
@@ -276,7 +276,7 @@ function BoletimGrid({
     spt.length ? spt[spt.length - 1].profundidade : 0,
     rocha.length ? rocha[rocha.length - 1].prof_ate : 0
   );
-  const H = Math.max(360, Math.min(900, Math.round(profTotal * 27) + 10));
+  const H = Math.max(420, Math.min(980, Math.round(profTotal * 30) + 10));
   const y = (d: number) => (d / profTotal) * H;
 
   const gridCols = gridTemplateColumns();
