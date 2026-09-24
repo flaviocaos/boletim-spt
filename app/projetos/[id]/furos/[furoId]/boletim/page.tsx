@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -58,6 +59,21 @@ export default function BoletimPage() {
     })();
   }, [params.id, params.furoId]);
 
+  async function waitImagesLoaded(el: HTMLElement) {
+    const imgs = Array.from(el.querySelectorAll("img"));
+    await Promise.all(
+      imgs.map((img) =>
+        img.complete && img.naturalWidth > 0
+          ? Promise.resolve()
+          : new Promise((resolve) => {
+              img.addEventListener("load", () => resolve(null), { once: true });
+              img.addEventListener("error", () => resolve(null), { once: true });
+              setTimeout(() => resolve(null), 8000);
+            })
+      )
+    );
+  }
+
   async function exportPdf() {
     setExporting(true);
     try {
@@ -66,7 +82,14 @@ export default function BoletimPage() {
       const pages = document.querySelectorAll<HTMLElement>("#boletimWrap .boletim-page");
       const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
       for (let i = 0; i < pages.length; i++) {
-        const canvas = await html2canvas(pages[i], { scale: 2, backgroundColor: "#ffffff" });
+        await waitImagesLoaded(pages[i]);
+        const canvas = await html2canvas(pages[i], {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          useCORS: true,
+          allowTaint: false,
+          imageTimeout: 15000,
+        });
         const img = canvas.toDataURL("image/jpeg", 0.92);
         const pw = doc.internal.pageSize.getWidth();
         const ph = doc.internal.pageSize.getHeight();
@@ -296,8 +319,30 @@ function BoletimGrid({
       >
         <HeaderCell label="N.A." colStart={1} colSpan={1} rowSpan={2} />
         <HeaderCell label="ENSAIO SPT" colStart={2} colSpan={5} rowSpan={1} />
-        <HeaderCell label="PROFUNDIDADE" colStart={7} colSpan={1} rowSpan={2} />
-        <HeaderCell label="SIMBOLOGIA" colStart={8} colSpan={1} rowSpan={2} />
+        <HeaderCell
+          label={
+            <>
+              PROFUN-
+              <br />
+              DIDADE
+            </>
+          }
+          colStart={7}
+          colSpan={1}
+          rowSpan={2}
+        />
+        <HeaderCell
+          label={
+            <>
+              SIMBO-
+              <br />
+              LOGIA
+            </>
+          }
+          colStart={8}
+          colSpan={1}
+          rowSpan={2}
+        />
         <HeaderCell label="DESCRIÇÃO TÁTIL-VISUAL" colStart={9} colSpan={1} rowSpan={2} align="left" />
         <HeaderCell label="AMOSTRA INTACTA" colStart={10} colSpan={1} rowSpan={2} />
         <HeaderCell label="CLASSIFICAÇÃO — ROCHA" colStart={11} colSpan={4} rowSpan={1} />
@@ -430,17 +475,24 @@ function BoletimGrid({
           </svg>
         </div>
 
-        {/* profundidade (marcos das camadas) */}
+        {/* profundidade (marcos das camadas) — número sempre acima da linha, nunca cortado */}
         <div className="bt-gcol">
           {boundaryDepths.map((d, i) => (
-            <div key={i} className="bt-cell-mark mono" style={{ top: y(d) }}>
+            <div
+              key={i}
+              className="bt-cell-mark mono"
+              style={{
+                top: y(d),
+                transform: i === 0 ? "translateY(1px)" : "translateY(calc(-100% - 1px))",
+              }}
+            >
               {fmtNum(d)}
             </div>
           ))}
         </div>
 
         {/* simbologia */}
-        <div className="bt-gcol" style={{ position: "relative" }}>
+        <div className="bt-gcol" style={{ position: "relative", overflow: "hidden" }}>
           {camadas.map((c) => (
             <div
               key={c.id}
@@ -458,7 +510,7 @@ function BoletimGrid({
         </div>
 
         {/* descrição tátil-visual */}
-        <div className="bt-gcol" style={{ position: "relative" }}>
+        <div className="bt-gcol" style={{ position: "relative", overflow: "hidden" }}>
           {camadas.map((c) => {
             const h = Math.max(y(c.prof_final) - y(c.prof_inicial), 1);
             return (
@@ -485,10 +537,17 @@ function BoletimGrid({
           })}
         </div>
 
-        {/* amostra intacta */}
+        {/* amostra intacta — número sempre acima da linha */}
         <div className="bt-gcol">
-          {amostrasIntactas.map((a) => (
-            <div key={a.id} className="bt-cell-mark mono" style={{ top: y(a.profundidade as number) }}>
+          {amostrasIntactas.map((a, i) => (
+            <div
+              key={a.id}
+              className="bt-cell-mark mono"
+              style={{
+                top: y(a.profundidade as number),
+                transform: i === 0 && (a.profundidade as number) < 0.5 ? "translateY(1px)" : "translateY(calc(-100% - 1px))",
+              }}
+            >
               {fmtNum(a.profundidade)}
             </div>
           ))}
@@ -522,9 +581,11 @@ function BoletimGrid({
                     right: 0,
                     borderBottom: "1px solid #17201f",
                     display: "flex",
-                    alignItems: "center",
+                    alignItems: "flex-end",
                     justifyContent: "center",
+                    paddingBottom: 2,
                     fontSize: 9,
+                    background: "#fff",
                   }}
                 >
                   {val}
@@ -547,7 +608,7 @@ function HeaderCell({
   small = false,
   align = "center",
 }: {
-  label: string;
+  label: ReactNode;
   colStart: number;
   colSpan: number;
   rowSpan: number;

@@ -652,7 +652,6 @@ legend {
   border-left: 1px solid #17201f;
   height: 100%;
   min-width: 0;
-  overflow: hidden;
 }
 .bt-gcol:first-child {
   border-left: none;
