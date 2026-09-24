@@ -18,7 +18,7 @@ import {
   TIPOS_SONDAGEM,
   nSpt,
 } from "@/lib/types";
-import { strataSvg, validarCamadas } from "@/lib/strata";
+import { graficoSptSvg, perfilSvg, validarCamadas } from "@/lib/strata";
 
 const TABS = [
   { id: "parametros", label: "Parâmetros" },
@@ -26,7 +26,7 @@ const TABS = [
   { id: "spt", label: "Tabela SPT" },
   { id: "rocha", label: "Tabela rocha" },
   { id: "freatico", label: "Nível freático" },
-  { id: "amostras", label: "Amostras" },
+  { id: "amostras", label: "Moran" },
   { id: "anexos", label: "Anexos" },
 ];
 
@@ -256,13 +256,23 @@ export default function FuroEditorPage() {
           )}
           {tab === "anexos" && <AnexosTab fotos={fotos} onUpload={uploadFotos} onUpdate={updateFoto} onDelete={deleteFoto} />}
         </div>
-        <div className="preview-box">
-          <h3>Pré-visualização — perfil &amp; SPT</h3>
-          <div
-            dangerouslySetInnerHTML={{
-              __html: strataSvg(furo, camadas, spt, rocha, { width: 300, height: 520, mode: "mini" }),
-            }}
-          />
+        <div style={{ position: "sticky", top: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className="preview-box" style={{ position: "static" }}>
+            <h3>Pré-visualização — estratigrafia</h3>
+            <div
+              dangerouslySetInnerHTML={{
+                __html: perfilSvg(furo, camadas, spt, rocha, { width: 170, height: 480 }),
+              }}
+            />
+          </div>
+          <div className="preview-box" style={{ position: "static" }}>
+            <h3>Pré-visualização — gráfico N × profundidade</h3>
+            <div
+              dangerouslySetInnerHTML={{
+                __html: graficoSptSvg(furo, camadas, spt, rocha, { width: 300, height: 480 }),
+              }}
+            />
+          </div>
         </div>
       </div>
     </AppShell>
@@ -325,7 +335,6 @@ function ParametrosTab({ furo, onChange }: { furo: Furo; onChange: (p: Partial<F
           <Field label="Coordenada X (m)" value={furo.coordenada_x} onChange={(v) => onChange({ coordenada_x: v ? parseFloat(v) : null })} />
           <Field label="Coordenada Y (m)" value={furo.coordenada_y} onChange={(v) => onChange({ coordenada_y: v ? parseFloat(v) : null })} />
           <Field label="Cota Z (m)" value={furo.cota_z} onChange={(v) => onChange({ cota_z: v ? parseFloat(v) : null })} />
-          <Field label="Deslocamento DH (m)" value={furo.deslocamento_dh} onChange={(v) => onChange({ deslocamento_dh: v ? parseFloat(v) : null })} />
           <Field
             label="Profundidade total (m)"
             type="number"
@@ -340,8 +349,6 @@ function ParametrosTab({ furo, onChange }: { furo: Furo; onChange: (p: Partial<F
         <div className="field-grid">
           <Field label="Data de início" type="date" value={furo.data_inicio} onChange={(v) => onChange({ data_inicio: v || null })} />
           <Field label="Data de conclusão" type="date" value={furo.data_conclusao} onChange={(v) => onChange({ data_conclusao: v || null })} />
-          <Field label="Encarregado (execução)" value={furo.encarregado} onChange={(v) => onChange({ encarregado: v })} />
-          <Field label="Avaliado por" value={furo.avaliado_por} onChange={(v) => onChange({ avaliado_por: v })} />
           <Field label="Elaborado por" value={furo.elaborado_por} onChange={(v) => onChange({ elaborado_por: v })} />
           <Field label="Verificado por" value={furo.verificado_por} onChange={(v) => onChange({ verificado_por: v })} />
         </div>
@@ -373,13 +380,14 @@ function CamadasTab({
               <th>Solo</th>
               <th>Descrição tátil-visual</th>
               <th>Hachura</th>
+              <th>Cor</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {camadas.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: 16, color: "var(--ink-soft)", textAlign: "center" }}>
+                <td colSpan={8} style={{ padding: 16, color: "var(--ink-soft)", textAlign: "center" }}>
                   Nenhuma camada. Adicione a primeira abaixo.
                 </td>
               </tr>
@@ -409,6 +417,15 @@ function CamadasTab({
                       </option>
                     ))}
                   </select>
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  <input
+                    type="color"
+                    style={{ width: 34, height: 26, padding: 0, border: "1px solid var(--line)", borderRadius: 5, background: "none" }}
+                    defaultValue={c.cor || HACHURAS[c.hachura]?.base || "#9c7c5c"}
+                    onChange={(e) => onUpdate(c.id, { cor: e.target.value })}
+                    title="Cor da hachura desta camada"
+                  />
                 </td>
                 <td className="rowdel">
                   <button className="btn sm danger" onClick={() => onDelete(c.id)}>
@@ -450,16 +467,14 @@ function SptTab({
               <th>1ª fase</th>
               <th>2ª fase</th>
               <th>3ª fase</th>
-              <th>4ª fase</th>
               <th>N (2ª+3ª)</th>
-              <th>Amostra</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {spt.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ padding: 16, color: "var(--ink-soft)", textAlign: "center" }}>
+                <td colSpan={6} style={{ padding: 16, color: "var(--ink-soft)", textAlign: "center" }}>
                   Nenhum ensaio SPT lançado.
                 </td>
               </tr>
@@ -478,13 +493,7 @@ function SptTab({
                 <td>
                   <input type="number" defaultValue={s.golpes_3a ?? ""} onBlur={(e) => onUpdate(s.id, { golpes_3a: e.target.value ? parseInt(e.target.value) : null })} />
                 </td>
-                <td>
-                  <input type="number" defaultValue={s.golpes_4a ?? ""} onBlur={(e) => onUpdate(s.id, { golpes_4a: e.target.value ? parseInt(e.target.value) : null })} />
-                </td>
                 <td className="n-final">{nSpt(s)}</td>
-                <td>
-                  <input defaultValue={s.indice_amostra || ""} onBlur={(e) => onUpdate(s.id, { indice_amostra: e.target.value })} />
-                </td>
                 <td className="rowdel">
                   <button className="btn sm danger" onClick={() => onDelete(s.id)}>
                     ✕

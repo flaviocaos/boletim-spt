@@ -44,6 +44,7 @@ export type Camada = {
   nome_solo: string | null;
   descricao: string | null;
   hachura: string;
+  cor: string | null;
   tem_amostra: boolean;
   obs: string | null;
 };
@@ -94,16 +95,12 @@ export const TIPOS_SONDAGEM = [
   "Trado manual",
 ];
 
+/** Apenas os materiais predominantes; a cor exata de cada camada é definida
+ * individualmente no campo "Cor" da tabela de Camadas (Camada.cor). */
 export const HACHURAS: Record<string, { label: string; base: string; pat: string }> = {
-  aterro: { label: "Aterro", base: "#cbb98d", pat: "aterro" },
   argila: { label: "Argila", base: "#9c7c5c", pat: "linhas" },
-  argila_siltosa: { label: "Argila siltosa", base: "#a9835f", pat: "linhas" },
-  argila_arenosa: { label: "Argila arenosa", base: "#b58f61", pat: "linhas_pontos" },
   silte: { label: "Silte", base: "#c2ad82", pat: "pontos_finos" },
-  silte_arenoso: { label: "Silte arenoso", base: "#cbb787", pat: "pontos_finos" },
   areia: { label: "Areia", base: "#ddc788", pat: "pontos" },
-  areia_siltosa: { label: "Areia siltosa", base: "#d4bd81", pat: "pontos" },
-  matacao: { label: "Matacão", base: "#9b9b93", pat: "circulos" },
   rocha: { label: "Rocha", base: "#767670", pat: "hachura_rocha" },
 };
 

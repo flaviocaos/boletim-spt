@@ -237,23 +237,23 @@ function MetaRow({ label, value }: { label: string; value?: string | number | nu
 
 const COLS = [
   { key: "na", label: "", width: 18 },
-  { key: "comprimento", label: "COMPRIMENTO", width: 32 },
-  { key: "f1", label: "1ª FASE", width: 24 },
-  { key: "f2", label: "2ª FASE", width: 24 },
-  { key: "f3", label: "3ª FASE", width: 24 },
-  { key: "grafico", label: "GRÁFICO", width: 96 },
-  { key: "profundidade", label: "PROFUNDIDADE", width: 38 },
-  { key: "simbologia", label: "SIMBOLOGIA", width: 30 },
+  { key: "comprimento", label: "COMPRIMENTO", width: 36 },
+  { key: "f1", label: "1ª FASE", width: 22 },
+  { key: "f2", label: "2ª FASE", width: 22 },
+  { key: "f3", label: "3ª FASE", width: 22 },
+  { key: "grafico", label: "GRÁFICO", width: 90 },
+  { key: "profundidade", label: "PROFUNDIDADE", width: 40 },
+  { key: "simbologia", label: "SIMBOLOGIA", width: 34 },
   { key: "descricao", label: "DESCRIÇÃO TÁTIL-VISUAL", width: "flex" as const },
-  { key: "amostra", label: "AMOSTRA INTACTA", width: 44 },
+  { key: "amostra", label: "AMOSTRA INTACTA", width: 40 },
   { key: "recuperacao", label: "RECUP.", width: 30 },
-  { key: "rqd", label: "RQD", width: 26 },
-  { key: "fraturacao", label: "FRATUR.", width: 34 },
-  { key: "alteracao", label: "ALTER.", width: 34 },
+  { key: "rqd", label: "RQD", width: 24 },
+  { key: "fraturacao", label: "FRATUR.", width: 32 },
+  { key: "alteracao", label: "ALTER.", width: 32 },
 ];
 
 function gridTemplateColumns() {
-  return COLS.map((c) => (c.width === "flex" ? "minmax(100px,1fr)" : `${c.width}px`)).join(" ");
+  return COLS.map((c) => (c.width === "flex" ? "minmax(110px,1fr)" : `${c.width}px`)).join(" ");
 }
 
 function BoletimGrid({
@@ -292,7 +292,7 @@ function BoletimGrid({
       {/* cabeçalho */}
       <div
         className="bt-grid-header"
-        style={{ display: "grid", gridTemplateColumns: gridCols, gridTemplateRows: "22px 22px" }}
+        style={{ display: "grid", gridTemplateColumns: gridCols, gridTemplateRows: "28px 22px" }}
       >
         <HeaderCell label="N.A." colStart={1} colSpan={1} rowSpan={2} />
         <HeaderCell label="ENSAIO SPT" colStart={2} colSpan={5} rowSpan={1} />
@@ -451,7 +451,7 @@ function BoletimGrid({
                 left: 0,
                 right: 0,
                 borderBottom: "1px solid #17201f",
-                ...hachuraCss(c.hachura),
+                ...hachuraCss(c.hachura, c.cor),
               }}
             />
           ))}
@@ -479,10 +479,7 @@ function BoletimGrid({
                   alignItems: h > 30 ? "center" : "flex-start",
                 }}
               >
-                <span>
-                  <b>{c.nome_solo}</b>
-                  {c.descricao ? `, ${c.descricao}` : ""}
-                </span>
+                <span>{c.descricao || c.nome_solo || ""}</span>
               </div>
             );
           })}
@@ -564,7 +561,7 @@ function HeaderCell({
       style={{
         gridColumn: `${colStart} / span ${colSpan}`,
         gridRow: `${row} / span ${rowSpan}`,
-        fontSize: small ? 7 : 7.6,
+        fontSize: small ? 6.4 : 7,
         textAlign: align,
         justifyContent: align === "left" ? "flex-start" : "center",
       }}

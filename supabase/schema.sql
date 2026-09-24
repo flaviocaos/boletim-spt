@@ -53,6 +53,7 @@ create table if not exists camadas (
   nome_solo text,
   descricao text,
   hachura text default 'argila',
+  cor text,
   tem_amostra boolean default false,
   obs text
 );
